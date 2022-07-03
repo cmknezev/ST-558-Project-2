@@ -8,6 +8,8 @@ output: html_document
 ```{r}
 # Libraries 
 library(tidyverse)
+library(caret)
+library(randomForest)
 ```
 
 # Introduction 
@@ -32,6 +34,14 @@ summary(busNews$shares)
 ```
 Here, we can see the mean number of shares, as well as the five number summary (min, 1st quartile, median, 3rd quartile, max).   
 
+Let us continue by creating a density plot to show the distribution of the number of shares. 
+```{r}
+ggplot(data = busNews, aes(x = shares)) + 
+  geom_density(color = "darkgreen") + 
+  labs(title = "Distribution of Shares", x = "# Shares")
+```
+This density plot allows us to analyze the distribuion of the number of shares. We can look for any skewness in the distribution, the number of peaks, and the overall shape of the distribution.
+
 Next, we would like to compare the proportion of articles that are shared a greater number of times than the median number of shares, for articles that are published on a weekend day or not. We will create a new variable, equal to 1 if the article was shared a greater number of times than the median, and equal to 0 otherwise. 
 ```{r}
 md <- median(busNews$shares)
@@ -46,3 +56,48 @@ ggplot(data = busNews2, aes(x = as.factor(is_weekend))) +
   scale_fill_discrete(labels = c('No', 'Yes'))
 ```
 We can easily compare the difference between articles published on the weekend and articles published on weekdays. 
+
+Now, we would like to investigate the relationship between the number of shares and the polarity of the title (`title_sentiment_polarity`). We will create a scatterplot to show this relationship. 
+```{r}
+ggplot(data = busNews, aes(x = title_sentiment_polarity, y = shares)) + 
+  geom_point() + 
+  geom_smooth(method = lm, color = "blue") + 
+  labs(title = "Title Polarity v. Number of Shares", x = "Title Polarity", 
+       y = "# Shares")
+```
+This chart will give us insight into the linear relationship between the polarity of the title and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite. 
+
+# Modeling 
+
+First, in order to prepare our data for modeling/prediction, we will remove two variables from the dataset that are non-predictive variables (`url` and `timedelta`). We will then split the data into training and test sets (70% and 30%, respectively).   
+```{r}
+busNews <- busNews %>% select(-c(url, timedelta))
+
+# set seed for reproducibility 
+set.seed(55)
+
+# creating training and test sets 
+newsIndex <- createDataPartition(busNews$shares, p = 0.7, list = FALSE)
+newsTrain <- busNews[newsIndex, ] 
+newsTest <- busNews[-newsIndex, ]
+```
+
+First, we will create a few linear regression models. Linear regression is a type of supervised learning that allows us to easily make predictions on our response variable of interest (in this case, number of shares). The goal of linear regression is to build an equation that takes in all specified predictor variables in order to best predict the response variable. The coefficients associated with the predictor variables for the equation are chosen such that the sum of squared residuals is minimized (i.e., minimizing prediction errors).   
+
+The first linear regression model we will fit in order to predict the number of shares will take in a number of predictor variables pertaining to the subjectivity, polarity, and positivity/negativity of the article. 
+```{r}
+linModel1 <- lm(shares ~ global_subjectivity + global_sentiment_polarity + 
+                  global_rate_positive_words + global_rate_negative_words + 
+                  avg_positive_polarity + avg_negative_polarity + 
+                  title_subjectivity + title_sentiment_polarity, 
+                data = newsTrain)
+```
+
+Next, we will create a random forest model. The idea of a random forest model is similar to the idea of a bagged tree model, where we fit many different models on different re-samples of the data, and average all predictions from these models. However when creating a random forest model, we use a random selection of predictor variables for each model created during bootstrapping. Using a random forest model will produce more accurate predictions, and will reduce variance in the model. For our model, we will randomly select m = p/3 predictor variables during boostrapping, where p is the total number of candidate predictor variables. Additionally, we will fit a total of 200 tree models during the boostrapping process.  
+```{r}
+m <- (ncol(newsTrain) - 1)/3 
+
+rfModel <- randomForest(shares ~ ., data = newsTrain, mtry = m, 
+                        ntree = 200, importance = TRUE)
+```
+
