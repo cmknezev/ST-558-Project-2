@@ -1,0 +1,48 @@
+---
+title: "ST 558 Project 2 Report"
+author: "Collin Knezevich & Jiyue Zhang"
+date: '2022-07-02'
+output: html_document
+---
+
+```{r}
+# Libraries 
+library(tidyverse)
+```
+
+# Introduction 
+
+# Data 
+
+We will read in the online news popularity data set locally. 
+```{r}
+newsData <- read_csv("OnlineNewsPopularity/OnlineNewsPopularity.csv")
+```
+
+For our initial analysis, we will only consider data from a single data channel. We will consider the "bus" (business) data channel, and we will subset the data to focus on this channel. 
+```{r}
+busNews <- newsData %>% filter(data_channel_is_bus == 1) 
+```
+
+# Summarizations 
+
+Our response variable of interest for this analysis is the number of shares. First, we will quickly summarize the distribution of the shares variable. 
+```{r}
+summary(busNews$shares)
+```
+Here, we can see the mean number of shares, as well as the five number summary (min, 1st quartile, median, 3rd quartile, max).   
+
+Next, we would like to compare the proportion of articles that are shared a greater number of times than the median number of shares, for articles that are published on a weekend day or not. We will create a new variable, equal to 1 if the article was shared a greater number of times than the median, and equal to 0 otherwise. 
+```{r}
+md <- median(busNews$shares)
+busNews2 <- busNews %>% mutate(shares_gt_median = ifelse(shares > md, 1, 0)) 
+
+ggplot(data = busNews2, aes(x = as.factor(is_weekend))) + 
+  geom_bar(aes(fill = as.factor(shares_gt_median)), position = "fill") + 
+  labs(title = "Proportion of Articles Shared More Than the Median, 
+       for Published on Weekend vs. Not", x = "Weekend", y = "Proportion", 
+       fill = "Shares > Median") + 
+  scale_x_discrete(labels = c('No', 'Yes')) + 
+  scale_fill_discrete(labels = c('No', 'Yes'))
+```
+We can easily compare the difference between articles published on the weekend and articles published on weekdays. 
