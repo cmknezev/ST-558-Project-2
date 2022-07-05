@@ -73,41 +73,41 @@ ggplot(data = busNews, aes(x = title_sentiment_polarity, y = shares)) +
 This chart will give us insight into the linear relationship between the polarity of the title and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite. 
 
 ## Graphs Scatterplot2
-Now, we would like to investigate the relationship between the number of shares and the Text sentiment polarity(`global_sentiment_polarity`). We will create a scatterplot to show this relationship. 
+Now, we would like to investigate the relationship between the number of shares and the Number of words in the title(`n_tokens_title`). We will create a scatterplot to show this relationship. 
 ```{r}
-ggplot(data = busNews, aes(x = global_sentiment_polarity, y = shares)) + 
+ggplot(data = busNews, aes(x = n_tokens_title, y = shares)) + 
   geom_point() + 
   geom_smooth(method = lm, color = "blue") + 
-  labs(title = "Text_sentiment_Polarity v. Number of Shares", x = "Text Polarity", 
+  labs(title = "Number of words in the title v. Number of Shares", x = "n_tokens_title", 
        y = "# Shares")
 ```
-This chart will give us insight into the linear relationship between the polarity of the text and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite.
+This chart will give us insight into the linear relationship between the Number of words in the title and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite. From this one, we didn't see a linear trend but a curve one. It may be have some relationship between them but not a linear relationship. 
 
 ## Graphs Scatterplot3
-Now, we would like to investigate the relationship between the number of shares and the Avg. polarity of positive words(`avg_positive_polarity`). We will create a scatterplot to show this relationship. 
+Now, we would like to investigate the relationship between the number of shares and the Number of words in the content(`n_tokens_content`). We will create a scatterplot to show this relationship. 
 ```{r}
-ggplot(data = busNews, aes(x = avg_positive_polarity, y = shares)) + 
+ggplot(data = busNews, aes(x = n_tokens_content, y = shares)) + 
   geom_point() + 
   geom_smooth(method = lm, color = "blue") + 
-  labs(title = "Positive Polarity v. Number of Shares", x = "Positive Polarity", 
+  labs(title = "Number of words in the content v. Number of Shares", x = "n_tokens_content", 
        y = "# Shares")
 ```
-This chart will give us insight into the linear relationship between the polarity of the text and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite.
+This chart will give us insight into the linear relationship between the Number of words in the content and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite. From this one, we didn't see a very clear linear trend.
 
 ## Graphs Scatterplot4
-Now, we would like to investigate the relationship between the number of shares and the Avg. polarity of negative words(`avg_negative_polarity`). We will create a scatterplot to show this relationship. 
+Now, we would like to investigate the relationship between the number of shares and the Rate of unique words in the content(`n_unique_tokens`). We will create a scatterplot to show this relationship. 
 ```{r}
-ggplot(data = busNews, aes(x = avg_negative_polarity, y = shares)) + 
+ggplot(data = busNews, aes(x = n_unique_tokens, y = shares)) + 
   geom_point() + 
   geom_smooth(method = lm, color = "blue") + 
-  labs(title = "Negative Polarity v. Number of Shares", x = "Negative Polarity", 
+  labs(title = "Rate of unique words in the content v. Number of Shares", x = "n_unique_tokens", 
        y = "# Shares")
 ```
-This chart will give us insight into the linear relationship between the Avg. polarity of negative words and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite.
+This chart will give us insight into the linear relationship between the Rate of unique words in the content and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite. From this one, we didn't see a very clear linear trend. 
 
 
 # Modeling 
-
+## Preparaton
 First, in order to prepare our data for modeling/prediction, we will remove two variables from the dataset that are non-predictive variables (`url` and `timedelta`). We will then split the data into training and test sets (70% and 30%, respectively).   
 ```{r}
 busNews <- busNews %>% select(-c(url, timedelta))
@@ -121,6 +121,7 @@ newsTrain <- busNews[newsIndex, ]
 newsTest <- busNews[-newsIndex, ]
 ```
 
+## Linear regression models
 First, we will create a few linear regression models. Linear regression is a type of supervised learning that allows us to easily make predictions on our response variable of interest (in this case, number of shares). The goal of linear regression is to build an equation that takes in all specified predictor variables in order to best predict the response variable. The coefficients associated with the predictor variables for the equation are chosen such that the sum of squared residuals is minimized (i.e., minimizing prediction errors).   
 
 The first linear regression model we will fit in order to predict the number of shares will take in a number of predictor variables pertaining to the subjectivity, polarity, and positivity/negativity of the article. 
@@ -132,6 +133,16 @@ linModel1 <- lm(shares ~ global_subjectivity + global_sentiment_polarity +
                 data = newsTrain)
 ```
 
+The second linear regression model we will fit in order to predict the number of shares will take in a number of predictor variables pertaining to the numbers of words in the title, contents and rate of unique words in the content.
+```{r}
+linModel2 <- lm(shares ~ n_tokens_title + I(n_tokens_title^2) + 
+                  n_tokens_content + I(n_tokens_content^2) +
+                  n_unique_tokens + I(n_unique_tokens^2),  
+                data = newsTrain)
+```
+
+
+## Random Forest
 Next, we will create a random forest model. The idea of a random forest model is similar to the idea of a bagged tree model, where we fit many different models on different re-samples of the data, and average all predictions from these models. However when creating a random forest model, we use a random selection of predictor variables for each model created during bootstrapping. Using a random forest model will produce more accurate predictions, and will reduce variance in the model. For our model, we will randomly select m = p/3 predictor variables during boostrapping, where p is the total number of candidate predictor variables. Additionally, we will fit a total of 200 tree models during the boostrapping process.  
 ```{r}
 m <- (ncol(newsTrain) - 1)/3 
@@ -140,7 +151,8 @@ rfModel <- randomForest(shares ~ ., data = newsTrain, mtry = m,
                         ntree = 200, importance = TRUE)
 ```
 
-Then, we will have a boosted tree model
+## Boosted Tree
+Then, we will have a boosted tree model. Boosted tree model is slowly train the tree so we don't overfit the model. Trees grown sequentially and each subsequent tree is grown on a modified version of original data. Then predictions updated as trees grown. I will use `expand.grid()` to corss validation all combination of `n.trees`, `interaction.depth`, `shrinkage`,and `n.minobsinnode` and it will automatic choose the best set.
 ```{r}
 n.trees <- c(25, 50, 100, 150, 200) 
 interaction.depth <- c(1, 2, 3, 4)
@@ -156,4 +168,19 @@ gbmFit <- train(shares ~ ., data = newsTrain,
                                            "interaction.depth" = interaction.depth, 
                                            "shrinkage" = shrinkage, 
                                            "n.minobsinnode" = n.minobsinnode))
+```
+
+# Comparation
+```{r}
+predlin1 <- predict(linModel1, newdata = newsTest)
+predlin2 <- predict(linModel2, newdata = newsTest)
+predrf3 <- predict(rfModel, newdata = newsTest)
+predgbm4 <- predict(gbmFit, newdata = newsTest)
+Resultlin1 <- postResample(predlin1, obs = newsTest$shares)
+Resultlin2 <- postResample(predlin2, obs = newsTest$shares)
+Resultrf3 <- postResample(predrf3, obs = newsTest$shares)
+Resultgbm4 <- postResample(predgbm4, obs = newsTest$shares)
+data.frame(Resultlin1, Resultlin2, 
+           Resultrf3, Resultgbm4)
+
 ```
