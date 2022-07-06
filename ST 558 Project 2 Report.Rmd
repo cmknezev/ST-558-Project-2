@@ -143,12 +143,11 @@ linModel2 <- lm(shares ~ n_tokens_title + I(n_tokens_title^2) +
 
 
 ## Random Forest
-Next, we will create a random forest model. The idea of a random forest model is similar to the idea of a bagged tree model, where we fit many different models on different re-samples of the data, and average all predictions from these models. However when creating a random forest model, we use a random selection of predictor variables for each model created during bootstrapping. Using a random forest model will produce more accurate predictions, and will reduce variance in the model. For our model, we will randomly select m = p/3 predictor variables during boostrapping, where p is the total number of candidate predictor variables. Additionally, we will fit a total of 200 tree models during the boostrapping process.  
+Next, we will create a random forest model. The idea of a random forest model is similar to the idea of a bagged tree model, where we fit many different models on different re-samples of the data, and average all predictions from these models. However when creating a random forest model, we use a random selection of predictor variables for each model created during bootstrapping. Using a random forest model will produce more accurate predictions, and will reduce variance in the model. For our model, we will fit a total of 200 tree models during the bootstrapping process. We will also use 5-fold cross-validation to choose the model, and we will tune the model to consider the values 15 - 25 for mtry (the number of predictor variables randomly selected during bootstrapping).   
 ```{r}
-m <- (ncol(newsTrain) - 1)/3 
-
-rfModel <- randomForest(shares ~ ., data = newsTrain, mtry = m, 
-                        ntree = 200, importance = TRUE)
+rfModel <- train(shares ~ ., data = newsTrain, method = "rf", 
+                 trControl = trainControl(method = "cv", number = 5), 
+                 tuneGrid = data.frame(mtry = 15:25))
 ```
 
 ## Boosted Tree
