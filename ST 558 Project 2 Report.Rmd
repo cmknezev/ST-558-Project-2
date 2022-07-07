@@ -3,6 +3,8 @@ title: "ST 558 Project 2 Report"
 author: "Collin Knezevich & Jiyue Zhang"
 date: '2022-07-02'
 output: html_document
+params: 
+  data_channel: "bus"
 ---
 
 ```{r}
@@ -11,6 +13,8 @@ library(tidyverse)
 library(caret)
 library(randomForest)
 library(gbm)
+library(shiny)
+library(rmarkdown)
 ```
 
 # Introduction 
@@ -22,9 +26,20 @@ We will read in the online news popularity data set locally.
 newsData <- read_csv("OnlineNewsPopularity/OnlineNewsPopularity.csv")
 ```
 
+We will also create a new variable - data_channel - so that we can knit our Rmd file with parameters for each of the different data channels in the dataset. 
+```{r}
+newsData <- newsData %>% 
+  mutate(data_channel = 
+           ifelse(data_channel_is_lifestyle == 1, "lifestyle", 
+             ifelse(data_channel_is_entertainment == 1, "entertainment", 
+               ifelse(data_channel_is_bus == 1, "bus", 
+                 ifelse(data_channel_is_socmed == 1, "socmed", 
+                   ifelse(data_channel_is_tech == 1, "tech", "world"))))))
+```
+
 For our initial analysis, we will only consider data from a single data channel. We will consider the "bus" (business) data channel, and we will subset the data to focus on this channel. 
 ```{r}
-busNews <- newsData %>% filter(data_channel_is_bus == 1) 
+busNews <- newsData %>% filter(data_channel == params$data_channel) 
 ```
 
 # Summarizations 
@@ -108,9 +123,9 @@ This chart will give us insight into the linear relationship between the Rate of
 
 # Modeling 
 ## Preparaton
-First, in order to prepare our data for modeling/prediction, we will remove two variables from the dataset that are non-predictive variables (`url` and `timedelta`). We will then split the data into training and test sets (70% and 30%, respectively).   
+First, in order to prepare our data for modeling/prediction, we will remove two variables from the dataset that are non-predictive variables (`url` and `timedelta`). We will also remove the variable we created for RMarkdown knitting with parameters. We will then split the data into training and test sets (70% and 30%, respectively).   
 ```{r}
-busNews <- busNews %>% select(-c(url, timedelta))
+busNews <- busNews %>% select(-c(url, timedelta, data_channel))
 
 # set seed for reproducibility 
 set.seed(55)
@@ -183,3 +198,29 @@ data.frame(Resultlin1, Resultlin2,
            Resultrf3, Resultgbm4)
 
 ```
+
+# Automation 
+
+We would like to automatically perform our analysis for each "data channel" in the dataset. We have already created a variable to help us with this, that will allow us to knit the RMarkdown document with parameters. Next, we need to create a data frame containing the file names for each data channel analysis, and the approporiate level of the `data_channel` variable.   
+```{r}
+# levels of data_channel 
+channels <- c("lifestyle", "entertainment", "bus", "socmed", "tech", "world") 
+
+# creating file names 
+outputFiles <- paste0(channels, ".html")
+
+# creating list with each level of data_channel 
+channelsList <- lapply(channels, FUN = function(x){list(channel = x)})
+
+# create data frame 
+channelsDF <- tibble(outputFiles, channelsList)
+channelsDF
+```
+
+Now we can use the apply function to render documents for each data channel.    
+```{r}
+apply(channelsDF, MARGIN = 1, FUN = function(x){ 
+  render(input = "ST 558 Project 2.Rmd", output_file = x[[1]], params = x[[2]]) 
+  })
+```
+
