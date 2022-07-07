@@ -1,0 +1,225 @@
+---
+title: "ST 558 Project 2 Report"
+author: "Collin Knezevich & Jiyue Zhang"
+date: '2022-07-02'
+output: html_document
+params: 
+  data_channel: "bus"
+---
+
+```{r}
+# Libraries 
+library(tidyverse)
+library(caret)
+library(randomForest)
+library(gbm)
+library(shiny)
+library(rmarkdown)
+```
+
+# Introduction 
+
+# Data 
+
+We will read in the online news popularity data set locally. 
+```{r}
+newsData <- read_csv("OnlineNewsPopularity/OnlineNewsPopularity.csv")
+```
+
+We will also create a new variable - data_channel - so that we can knit our Rmd file with parameters for each of the different data channels in the dataset. 
+```{r}
+newsData <- newsData %>% 
+  mutate(data_channel = 
+           ifelse(data_channel_is_lifestyle == 1, "lifestyle", 
+             ifelse(data_channel_is_entertainment == 1, "entertainment", 
+               ifelse(data_channel_is_bus == 1, "bus", 
+                 ifelse(data_channel_is_socmed == 1, "socmed", 
+                   ifelse(data_channel_is_tech == 1, "tech", "world"))))))
+```
+
+For our initial analysis, we will only consider data from a single data channel. We will consider the "bus" (business) data channel, and we will subset the data to focus on this channel. 
+```{r}
+busNews <- newsData %>% filter(data_channel == params$data_channel) 
+```
+
+# Summarizations 
+## Summary Statistics
+Our response variable of interest for this analysis is the number of shares. First, we will quickly summarize the distribution of the shares variable. 
+```{r}
+summary(busNews$shares)
+sd(busNews$shares)
+```
+Here, we can see the mean number of shares, as well as the five number summary (min, 1st quartile, median, 3rd quartile, max). From the value of mean and median, since the mean is bigger than themedian, the distribution of shares will be right-skewed. And the standard deviation is really large, so there might be some outliers in the data. 
+
+## Graphs densityplot
+Let us continue by creating a density plot to show the distribution of the number of shares. 
+```{r}
+ggplot(data = busNews, aes(x = shares)) + 
+  geom_density(color = "darkgreen") + 
+  labs(title = "Distribution of Shares", x = "# Shares")
+```
+This density plot allows us to analyze the distribuion of the number of shares. We can look for any skewness in the distribution, the number of peaks, and the overall shape of the distribution.
+
+## Graphs barplot
+We would like to compare the proportion of articles that are shared a greater number of times than the median number of shares, for articles that are published on a weekend day or not. We will create a new variable, equal to 1 if the article was shared a greater number of times than the median, and equal to 0 otherwise. 
+```{r}
+md <- median(busNews$shares)
+busNews2 <- busNews %>% mutate(shares_gt_median = ifelse(shares > md, 1, 0)) 
+
+ggplot(data = busNews2, aes(x = as.factor(is_weekend))) + 
+  geom_bar(aes(fill = as.factor(shares_gt_median)), position = "fill") + 
+  labs(title = "Proportion of Articles Shared More Than the Median, 
+       for Published on Weekend vs. Not", x = "Weekend", y = "Proportion", 
+       fill = "Shares > Median") + 
+  scale_x_discrete(labels = c('No', 'Yes')) + 
+  scale_fill_discrete(labels = c('No', 'Yes'))
+```
+We can easily compare the difference between articles published on the weekend and articles published on weekdays. 
+
+## Graphs Scatterplot1
+Now, we would like to investigate the relationship between the number of shares and the polarity of the title (`title_sentiment_polarity`). We will create a scatterplot to show this relationship. 
+```{r}
+ggplot(data = busNews, aes(x = title_sentiment_polarity, y = shares)) + 
+  geom_point() + 
+  geom_smooth(method = lm, color = "blue") + 
+  labs(title = "Title Polarity v. Number of Shares", x = "Title Polarity", 
+       y = "# Shares")
+```
+This chart will give us insight into the linear relationship between the polarity of the title and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite. 
+
+## Graphs Scatterplot2
+Now, we would like to investigate the relationship between the number of shares and the Number of words in the title(`n_tokens_title`). We will create a scatterplot to show this relationship. 
+```{r}
+ggplot(data = busNews, aes(x = n_tokens_title, y = shares)) + 
+  geom_point() + 
+  geom_smooth(method = lm, color = "blue") + 
+  labs(title = "Number of words in the title v. Number of Shares", x = "n_tokens_title", 
+       y = "# Shares")
+```
+This chart will give us insight into the linear relationship between the Number of words in the title and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite. From this one, we didn't see a linear trend but a curve one. It may be have some relationship between them but not a linear relationship. 
+
+## Graphs Scatterplot3
+Now, we would like to investigate the relationship between the number of shares and the Number of words in the content(`n_tokens_content`). We will create a scatterplot to show this relationship. 
+```{r}
+ggplot(data = busNews, aes(x = n_tokens_content, y = shares)) + 
+  geom_point() + 
+  geom_smooth(method = lm, color = "blue") + 
+  labs(title = "Number of words in the content v. Number of Shares", x = "n_tokens_content", 
+       y = "# Shares")
+```
+This chart will give us insight into the linear relationship between the Number of words in the content and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite. From this one, we didn't see a very clear linear trend.
+
+## Graphs Scatterplot4
+Now, we would like to investigate the relationship between the number of shares and the Rate of unique words in the content(`n_unique_tokens`). We will create a scatterplot to show this relationship. 
+```{r}
+ggplot(data = busNews, aes(x = n_unique_tokens, y = shares)) + 
+  geom_point() + 
+  geom_smooth(method = lm, color = "blue") + 
+  labs(title = "Rate of unique words in the content v. Number of Shares", x = "n_unique_tokens", 
+       y = "# Shares")
+```
+This chart will give us insight into the linear relationship between the Rate of unique words in the content and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite. From this one, we didn't see a very clear linear trend. 
+
+
+# Modeling 
+## Preparaton
+First, in order to prepare our data for modeling/prediction, we will remove two variables from the dataset that are non-predictive variables (`url` and `timedelta`). We will also remove the variable we created for RMarkdown knitting with parameters. We will then split the data into training and test sets (70% and 30%, respectively).   
+```{r}
+busNews <- busNews %>% select(-c(url, timedelta, data_channel))
+
+# set seed for reproducibility 
+set.seed(55)
+
+# creating training and test sets 
+newsIndex <- createDataPartition(busNews$shares, p = 0.7, list = FALSE)
+newsTrain <- busNews[newsIndex, ] 
+newsTest <- busNews[-newsIndex, ]
+```
+
+## Linear regression models
+First, we will create a few linear regression models. Linear regression is a type of supervised learning that allows us to easily make predictions on our response variable of interest (in this case, number of shares). The goal of linear regression is to build an equation that takes in all specified predictor variables in order to best predict the response variable. The coefficients associated with the predictor variables for the equation are chosen such that the sum of squared residuals is minimized (i.e., minimizing prediction errors).   
+
+The first linear regression model we will fit in order to predict the number of shares will take in a number of predictor variables pertaining to the subjectivity, polarity, and positivity/negativity of the article. 
+```{r}
+linModel1 <- lm(shares ~ global_subjectivity + global_sentiment_polarity + 
+                  global_rate_positive_words + global_rate_negative_words + 
+                  avg_positive_polarity + avg_negative_polarity + 
+                  title_subjectivity + title_sentiment_polarity, 
+                data = newsTrain)
+```
+
+The second linear regression model we will fit in order to predict the number of shares will take in a number of predictor variables pertaining to the numbers of words in the title, contents and rate of unique words in the content.
+```{r}
+linModel2 <- lm(shares ~ n_tokens_title + I(n_tokens_title^2) + 
+                  n_tokens_content + I(n_tokens_content^2) +
+                  n_unique_tokens + I(n_unique_tokens^2),  
+                data = newsTrain)
+```
+
+
+## Random Forest
+Next, we will create a random forest model. The idea of a random forest model is similar to the idea of a bagged tree model, where we fit many different models on different re-samples of the data, and average all predictions from these models. However when creating a random forest model, we use a random selection of predictor variables for each model created during bootstrapping. Using a random forest model will produce more accurate predictions, and will reduce variance in the model. For our model, we will fit a total of 200 tree models during the bootstrapping process. We will also use 5-fold cross-validation to choose the model, and we will tune the model to consider the values 15 - 25 for mtry (the number of predictor variables randomly selected during bootstrapping).   
+```{r}
+rfModel <- train(shares ~ ., data = newsTrain, method = "rf", 
+                 trControl = trainControl(method = "cv", number = 5), 
+                 tuneGrid = data.frame(mtry = 15:25))
+```
+
+## Boosted Tree
+Then, we will have a boosted tree model. Boosted tree model is slowly train the tree so we don't overfit the model. Trees grown sequentially and each subsequent tree is grown on a modified version of original data. Then predictions updated as trees grown. I will use `expand.grid()` to corss validation all combination of `n.trees`, `interaction.depth`, `shrinkage`,and `n.minobsinnode` and it will automatic choose the best set.
+```{r}
+n.trees <- c(25, 50, 100, 150, 200) 
+interaction.depth <- c(1, 2, 3, 4)
+shrinkage <- 0.1
+n.minobsinnode <- 10
+gbmFit <- train(shares ~ ., data = newsTrain,
+                method = "gbm",
+                    verbose=F,
+                    trControl = trainControl(method = "repeatedcv",    
+                                             number = 5, 
+                                             repeats = 3),
+                    tuneGrid = expand.grid("n.trees" = n.trees, 
+                                           "interaction.depth" = interaction.depth, 
+                                           "shrinkage" = shrinkage, 
+                                           "n.minobsinnode" = n.minobsinnode))
+```
+
+# Comparation
+```{r}
+predlin1 <- predict(linModel1, newdata = newsTest)
+predlin2 <- predict(linModel2, newdata = newsTest)
+predrf3 <- predict(rfModel, newdata = newsTest)
+predgbm4 <- predict(gbmFit, newdata = newsTest)
+Resultlin1 <- postResample(predlin1, obs = newsTest$shares)
+Resultlin2 <- postResample(predlin2, obs = newsTest$shares)
+Resultrf3 <- postResample(predrf3, obs = newsTest$shares)
+Resultgbm4 <- postResample(predgbm4, obs = newsTest$shares)
+data.frame(Resultlin1, Resultlin2, 
+           Resultrf3, Resultgbm4)
+
+```
+
+# Automation 
+
+We would like to automatically perform our analysis for each "data channel" in the dataset. We have already created a variable to help us with this, that will allow us to knit the RMarkdown document with parameters. Next, we need to create a data frame containing the file names for each data channel analysis, and the approporiate level of the `data_channel` variable.   
+```{r}
+# levels of data_channel 
+channels <- c("lifestyle", "entertainment", "bus", "socmed", "tech", "world") 
+
+# creating file names 
+outputFiles <- paste0(channels, ".html")
+
+# creating list with each level of data_channel 
+channelsList <- lapply(channels, FUN = function(x){list(data_channel = x)})
+
+# create data frame 
+channelsDF <- tibble(outputFiles, channelsList)
+```
+
+Now we can use the apply function to render documents for each data channel.    
+```{r, eval = FALSE, echo = TRUE}
+apply(channelsDF, MARGIN = 1, FUN = function(x){ 
+  render(input = "ST-558-Project-2-Report.Rmd", output_file = x[[1]], params = x[[2]]) 
+  })
+```
+
