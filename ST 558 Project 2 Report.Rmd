@@ -220,7 +220,7 @@ channelsDF
 Now we can use the apply function to render documents for each data channel.    
 ```{r}
 apply(channelsDF, MARGIN = 1, FUN = function(x){ 
-  render(input = "ST 558 Project 2.Rmd", output_file = x[[1]], params = x[[2]]) 
+  render(input = "ST 558 Project 2 Report.Rmd", output_file = x[[1]], params = x[[2]]) 
   })
 ```
 
