@@ -19,6 +19,11 @@ library(rmarkdown)
 
 # Introduction 
 
+This project is primary use the variables in Online News Popularity Data Set to predict the number of shares.
+This dataset summarizes a heterogeneous set of features about articles published by Mashable in a period of two years. The goal is to predict the number of shares in social networks (popularity). Therefore, the `share` variable will be the response variable in our model.
+In this project, we will use linear regression, random forest and boosted tree model to predict the number of shares. (The details about each model we will discuss through the modeling part).
+For the predictors, we have choose some variables like the numbers of words in the title, contents and rate of unique words in the content that we considered may affect the number of shares after analyze some summary statistics and the plot.
+
 # Data 
 
 We will read in the online news popularity data set locally. 
@@ -96,7 +101,7 @@ ggplot(data = busNews, aes(x = n_tokens_title, y = shares)) +
   labs(title = "Number of words in the title v. Number of Shares", x = "n_tokens_title", 
        y = "# Shares")
 ```
-This chart will give us insight into the linear relationship between the Number of words in the title and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite. From this one, we didn't see a linear trend but a curve one. It may be have some relationship between them but not a linear relationship. 
+This chart will give us insight into the linear relationship between the Number of words in the title and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite. 
 
 ## Graphs Scatterplot3
 Now, we would like to investigate the relationship between the number of shares and the Number of words in the content(`n_tokens_content`). We will create a scatterplot to show this relationship. 
@@ -107,7 +112,7 @@ ggplot(data = busNews, aes(x = n_tokens_content, y = shares)) +
   labs(title = "Number of words in the content v. Number of Shares", x = "n_tokens_content", 
        y = "# Shares")
 ```
-This chart will give us insight into the linear relationship between the Number of words in the content and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite. From this one, we didn't see a very clear linear trend.
+This chart will give us insight into the linear relationship between the Number of words in the content and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite. 
 
 ## Graphs Scatterplot4
 Now, we would like to investigate the relationship between the number of shares and the Rate of unique words in the content(`n_unique_tokens`). We will create a scatterplot to show this relationship. 
@@ -118,8 +123,7 @@ ggplot(data = busNews, aes(x = n_unique_tokens, y = shares)) +
   labs(title = "Rate of unique words in the content v. Number of Shares", x = "n_unique_tokens", 
        y = "# Shares")
 ```
-This chart will give us insight into the linear relationship between the Rate of unique words in the content and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite. From this one, we didn't see a very clear linear trend. 
-
+This chart will give us insight into the linear relationship between the Rate of unique words in the content and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite. 
 
 # Modeling 
 ## Preparaton
@@ -184,8 +188,12 @@ gbmFit <- train(shares ~ ., data = newsTrain,
                                            "n.minobsinnode" = n.minobsinnode))
 ```
 
-# Comparation
+# Comparison
+
+In this part, we want to compare each models, and select the winner one. This comparison is depend on the value of RMSE of each model, the smaller one is better.
+
 ```{r}
+# prepartion
 predlin1 <- predict(linModel1, newdata = newsTest)
 predlin2 <- predict(linModel2, newdata = newsTest)
 predrf3 <- predict(rfModel, newdata = newsTest)
@@ -194,10 +202,19 @@ Resultlin1 <- postResample(predlin1, obs = newsTest$shares)
 Resultlin2 <- postResample(predlin2, obs = newsTest$shares)
 Resultrf3 <- postResample(predrf3, obs = newsTest$shares)
 Resultgbm4 <- postResample(predgbm4, obs = newsTest$shares)
-data.frame(Resultlin1, Resultlin2, 
-           Resultrf3, Resultgbm4)
+
+#comparison
+RMSE_all <- tibble(Resultlin1[1], Resultlin2[1], Resultrf3[1], Resultgbm4[1])
+names(RMSE_all) <- c("Linear Regression1", "Linear Regression2", "Random Forest", "Boosted Tree")
+RMSEconvert <- RMSE_all %>%
+  pivot_longer(cols = 1:4, names_to = "Model", values_to = "RMSE")
+RMSEsort <- RMSEconvert %>% 
+  arrange(RMSE)
+RMSEsort[1,]
 
 ```
+
+This model is the winner of all.
 
 # Automation 
 
