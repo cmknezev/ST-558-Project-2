@@ -229,7 +229,7 @@ channels <- c("lifestyle", "entertainment", "bus", "socmed", "tech", "world")
 outputFiles <- paste0(channels, ".html")
 
 # creating list with each level of data_channel 
-channelsList <- lapply(channels, FUN = function(x){list(channel = x)})
+channelsList <- lapply(channels, FUN = function(x){list(data_channel = x)})
 
 # create data frame 
 channelsDF <- tibble(outputFiles, channelsList)
