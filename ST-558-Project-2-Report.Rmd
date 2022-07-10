@@ -18,11 +18,11 @@ library(rmarkdown)
 ```
 
 # Introduction 
-
 This project is primary use the variables in Online News Popularity Data Set to predict the number of shares.
 This dataset summarizes a heterogeneous set of features about articles published by Mashable in a period of two years. The goal is to predict the number of shares in social networks (popularity). Therefore, the `share` variable will be the response variable in our model.
 In this project, we will use linear regression, random forest and boosted tree model to predict the number of shares. (The details about each model we will discuss through the modeling part).
 For the predictors, we have choose some variables like the numbers of words in the title, contents and rate of unique words in the content that we considered may affect the number of shares after analyze some summary statistics and the plot.
+
 
 # Data 
 
@@ -125,6 +125,7 @@ ggplot(data = busNews, aes(x = n_unique_tokens, y = shares)) +
 ```
 This chart will give us insight into the linear relationship between the Rate of unique words in the content and the number of shares. If the line slopes upwards, we can expect that the number of shares increases as the polarity of the title increases. If the line sloped downwards, we can expect the opposite. 
 
+
 # Modeling 
 ## Preparaton
 First, in order to prepare our data for modeling/prediction, we will remove two variables from the dataset that are non-predictive variables (`url` and `timedelta`). We will also remove the variable we created for RMarkdown knitting with parameters. We will then split the data into training and test sets (70% and 30%, respectively).   
@@ -216,6 +217,7 @@ RMSEsort[1,]
 
 This model is the winner of all.
 
+
 # Automation 
 
 We would like to automatically perform our analysis for each "data channel" in the dataset. We have already created a variable to help us with this, that will allow us to knit the RMarkdown document with parameters. Next, we need to create a data frame containing the file names for each data channel analysis, and the approporiate level of the `data_channel` variable.   
@@ -227,7 +229,7 @@ channels <- c("lifestyle", "entertainment", "bus", "socmed", "tech", "world")
 outputFiles <- paste0(channels, ".html")
 
 # creating list with each level of data_channel 
-channelsList <- lapply(channels, FUN = function(x){list(data_channel = x)})
+channelsList <- lapply(channels, FUN = function(x){list(channel = x)})
 
 # create data frame 
 channelsDF <- tibble(outputFiles, channelsList)
